@@ -33,6 +33,7 @@ var express     = require('express'),
     http        = require('http'),
     crypto      = require('crypto'),
     redis       = require('redis'),
+    request = require('request'),
     RedisStore  = require('connect-redis')(express);
 
 // Configuration
@@ -306,7 +307,9 @@ function processRequest(req, res, next) {
     var baseHostUrl = baseHostInfo[0],
         baseHostPort = (baseHostInfo.length > 1) ? baseHostInfo[1] : "";
 
-    var paramString = query.stringify(params),
+    var paramString;
+    if(httpMethod === 'GET'){    
+        paramString = query.stringify(params),
         privateReqURL = apiConfig.protocol + '://' + apiConfig.baseURL + apiConfig.privatePath + methodURL + ((paramString.length > 0) ? '?' + paramString : ""),
         options = {
             headers: {},
@@ -316,6 +319,19 @@ function processRequest(req, res, next) {
             method: httpMethod,
             path: apiConfig.publicPath + methodURL + ((paramString.length > 0) ? '?' + paramString : "")
         };
+    }else if(httpMethod === 'POST' || httpMethod === 'PUT' || httpMethod === 'DELETE'){
+        privateReqURL = apiConfig.protocol + '://' + apiConfig.baseURL + methodURL ;
+        options = {
+            headers: {},
+            url:privateReqURL,
+            method:httpMethod
+        };
+        if(typeof params.body != 'undefined'){
+            options.json = JSON.parse(params.body);
+        }
+    }    
+     console.log("FINISH OPTIONS ");
+    console.dir(options);
 
     if (apiConfig.oauth) {
         console.log('Using OAuth');
@@ -517,31 +533,88 @@ function processRequest(req, res, next) {
             options.headers['Content-Length'] = 0;
         }
 
+        options.headers['context-type']  ="application/json"
+
         if (config.debug) {
             console.log(util.inspect(options));
         };
+       //console.log(options);
+         
+          // API Call. response is the response from the API, res is the response we will send back to the user.
+        if(options.method === 'GET'){
 
-        // API Call. response is the response from the API, res is the response we will send back to the user.
-        var apiCall = http.request(options, function(response) {
-            response.setEncoding('utf-8');
-            if (config.debug) {
-                console.log('HEADERS: ' + JSON.stringify(response.headers));
-                console.log('STATUS CODE: ' + response.statusCode);
-            };
+            var apiCall = http.request(options, function(response) {
+                response.setEncoding('utf-8');
+                if (config.debug) {
+                    console.log('HEADERS: ' + JSON.stringify(response.headers));
+                    console.log('STATUS CODE: ' + response.statusCode);
+                };
 
-            res.statusCode = response.statusCode;
+                res.statusCode = response.statusCode;
 
-            var body = '';
+                var body = '';
 
-            response.on('data', function(data) {
-                body += data;
-            })
+                response.on('data', function(data) {
+                    body += data;
+                })
 
-            response.on('end', function() {
+                response.on('end', function() {
+                    delete options.agent;
+
+                    var responseContentType = response.headers['content-type'];
+
+                    switch (true) {
+                        case /application\/javascript/.test(responseContentType):
+                        case /application\/json/.test(responseContentType):
+                            console.log(util.inspect(body));
+                            // body = JSON.parse(body);
+                            break;
+                        case /application\/xml/.test(responseContentType):
+                        case /text\/xml/.test(responseContentType):
+                        default:
+                    }
+
+                    // Set Headers and Call
+                    req.resultHeaders = response.headers;
+                    req.call = url.parse(options.host + options.path);
+                    req.call = url.format(req.call);
+
+                    // Response body
+                    req.result = body;
+
+                    console.log(util.inspect(body));
+
+                    next();
+                })
+            }).on('error', function(e) {
+                if (config.debug) {
+                    console.log('HEADERS: ' + JSON.stringify(res.headers));
+                    console.log("Got error: " + e.message);
+                    console.log("Error: " + util.inspect(e));
+                };
+            });
+
+            
+            apiCall.end();
+
+        }else{
+            console.log("------------- "+options.method+" METHOD ---------------");
+            request(options,function (_error, response, _body) {
+                response.setEncoding('utf-8');
+                console.log("RESPONSE");
+                console.log(_error);
+                if (config.debug) {
+                    console.log('HEADERS: ' + JSON.stringify(_response));
+                    console.log('STATUS CODE: ' + response.statusCode);
+                };
+
+                var statusCode = response.statusCode;
+                var body = _body;
+                var headers = response.headers;  
+
+               // res.statusCode = response.statusCode;
                 delete options.agent;
-
                 var responseContentType = response.headers['content-type'];
-
                 switch (true) {
                     case /application\/javascript/.test(responseContentType):
                     case /application\/json/.test(responseContentType):
@@ -555,26 +628,20 @@ function processRequest(req, res, next) {
 
                 // Set Headers and Call
                 req.resultHeaders = response.headers;
-                req.call = url.parse(options.host + options.path);
+                req.call = url.parse(options.url);
                 req.call = url.format(req.call);
 
                 // Response body
                 req.result = body;
 
                 console.log(util.inspect(body));
-
                 next();
-            })
-        }).on('error', function(e) {
-            if (config.debug) {
-                console.log('HEADERS: ' + JSON.stringify(res.headers));
-                console.log("Got error: " + e.message);
-                console.log("Error: " + util.inspect(e));
-            };
-        });
+            });
 
-        apiCall.end();
+        } 
+        
     }
+ 
 }
 
 // Dynamic Helpers
@@ -664,4 +731,4 @@ if (!module.parent) {
     var port = process.env.PORT || config.port;
     app.listen(port);
     console.log("Express server listening on port %d", app.address().port);
-}
+} 

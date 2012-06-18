@@ -1,3 +1,5 @@
+Changes : I use module REQUEST for http request. Only for unauthorized request.
+
 I/O Docs - Open Source in Node.js
 =================================
 Copyright 2011 Mashery, Inc.
@@ -392,6 +394,72 @@ You should look at the *./public/data/* directory for examples.
     }]
 }
 ```
+### Example #2 - EXAMPLE POST
+            {  "MethodName":"POST POKEMON",
+               "methods":"JSON",
+               "Synopsis":"Create new Pokemon",
+               "HTTPMethod":"POST",
+               "URI":"/pokemon",
+               "RequiresOAuth":"N",
+               "read-only":false,
+               "parameters":[
+               {
+                     "Name":"body",
+                     "Required":"Y",
+                     "Default":"{\"name\":\"Pikachu\",\"description\":\"Pikachu is the best! " }",
+                     "Type":"json",
+                     "Description":"Add pokemon"
+               } 
+              ]
+            },
+
+
+### Example #3 - EXAMPLE PUT
+            {  "MethodName":"PUT POKEMONS",
+               "methods":"JSON",
+               "Synopsis":"Update POKEMON",
+               "HTTPMethod":"PUT",
+               "URI":"/pokemon/:id",
+               "RequiresOAuth":"N",
+               "read-only":false,
+               "parameters":[
+               {
+                     "Name":"body",
+                     "Required":"Y",
+                     "Default":"{\"name\":\"Pikachu\",\"description\":\"Pikachu is the best! And is Electric" }",
+                     "Type":"json",
+                     "Description":"Update pokemon"
+               },
+               {
+                     "Name":"id",
+                     "Required":"Y",
+                     "Default":"1",
+                     "Type":"integer",
+                     "Description":"Id Pokemon "
+               } 
+              ]
+            }
+
+### Example #4 - EXAMPLE DELETE
+            {  "MethodName":"DELETE POKEMON",
+               "methods":"JSON",
+               "Synopsis":"DELETE Pokemon",
+               "HTTPMethod":"DELETE",
+               "URI":"/pokemon/:id",
+               "RequiresOAuth":"N",
+               "read-only":false,
+               "parameters":[
+               {
+                     "Name":"id",
+                     "Required":"Y",
+                     "Default":"1",
+                     "Type":"integer",
+                     "Description":"Id Pokemon "
+               } 
+              ]
+            },
+
+
 
 Line:
 
